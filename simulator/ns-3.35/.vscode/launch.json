@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/examples/PowerTCP/ns3.35-powertcp-evaluation-burst-debug",
+            "args": [
+                "--conf=/home/hxnan/ns3-datacenter/simulator/ns-3.35/examples/PowerTCP/config-burst.txt",
+                "--algorithm=1", "--wien=false", "--delayWien=false", "--windowCheck=1"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build",
+            "environment": [{ "name": "LD_LIBRARY_PATH", "value": "${workspaceFolder}/build/lib" }],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+              {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+              }
+            ]
+        }
+    ]
+}

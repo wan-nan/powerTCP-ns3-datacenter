@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 import pylab
 from matplotlib.lines import Line2D
 
-NS3="/home/vamsi/lakewood/src/phd/ns3-datacenter/simulator/ns-3.35/"
-plots_dir="/home/vamsi/Powertcp-NSDI/"
+NS3="/home/hxnan/ns3-datacenter/simulator/ns-3.35/"
+plots_dir=NS3+"figures/"
 results=NS3+"examples/PowerTCP/results_burst/"
 
-# plots_dir="/home/vamsi/Powertcp-NSDI/"
+# plots_dir="/home/hxnan/Powertcp-NSDI/"
 plt.rcParams.update({'font.size': 18})
 
 
@@ -70,7 +70,7 @@ for alg in algs:
     ax.set_xticklabels(xticklabels)
     
     ax.set_xlabel("Time (ms)")
-    ax.set_xlim(0.1495,0.154)
+    ax.set_xlim(0.125,0.135)
     ax.plot(df["time"],df["th"],label="Throughput",c='#1979a9',lw=2)
     ax1.set_ylim(0,600)
     ax1.set_ylabel("Queue length (KB)")
