@@ -63,14 +63,14 @@ for alg in algs:
     ax.set_yticklabels(["10","25","40","80","100"])
     ax.set_ylabel("Throughput (Gbps)")
     
-    start=0.15
-    xtics=[i*0.001+start for i in range(0,6)]
-    ax.set_xticks(xtics)
-    xticklabels=[str(i) for i in range(0,6)]
-    ax.set_xticklabels(xticklabels)
+    # start=0.15
+    # xtics=[i*0.001+start for i in range(0,6)]
+    # ax.set_xticks(xtics)
+    # xticklabels=[str(i) for i in range(0,6)]
+    # ax.set_xticklabels(xticklabels)
     
     ax.set_xlabel("Time (ms)")
-    ax.set_xlim(0.125,0.135)
+    ax.set_xlim(0.1495,0.164)
     ax.plot(df["time"],df["th"],label="Throughput",c='#1979a9',lw=2)
     ax1.set_ylim(0,600)
     ax1.set_ylabel("Queue length (KB)")

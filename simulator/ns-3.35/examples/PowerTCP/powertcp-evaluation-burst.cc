@@ -43,6 +43,11 @@ using namespace std;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
+// Msg size distribution
+std::map<double,int> msgSizeCDF;
+double avgMsgSizePkts;
+vector<Ptr<RdmaClient>> appList;
+
 uint32_t cc_mode = 1;
 bool enable_qcn = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
@@ -147,13 +152,71 @@ void ReadFlowInput() {
 		NS_ASSERT(n.Get(flow_input.src)->GetNodeType() == 0 && n.Get(flow_input.dst)->GetNodeType() == 0);
 	}
 }
+std::map<double,int> ReadMsgSizeDist (double &avgMsgSizePkts)
+{
+  std::ifstream msgSizeDistFile;
+//   msgSizeDistFile.open (configJsonObj["inputFile"].at ("sizeDist").as_string ().c_str ());
+  msgSizeDistFile.open ("config/DCTCP-MsgSizeDist.txt");
+  // NS_LOG_FUNCTION ("Reading Msg Size Distribution From: " << msgSizeDistFileName);
+
+  std::string line;
+  std::istringstream lineBuffer;
+
+  getline (msgSizeDistFile, line);
+  lineBuffer.str (line);
+  lineBuffer >> avgMsgSizePkts;
+
+  std::map<double,int> msgSizeCDF;
+  double prob;
+  int msgSizePkts;
+  while (getline (msgSizeDistFile, line))
+    {
+      lineBuffer.clear ();
+      lineBuffer.str (line);
+      lineBuffer >> msgSizePkts;
+      lineBuffer >> prob;
+
+      msgSizeCDF[prob] = msgSizePkts;
+    }
+  msgSizeDistFile.close ();
+
+  return msgSizeCDF;
+}
 void ScheduleFlowInputs() {
+	msgSizeCDF = ReadMsgSizeDist (avgMsgSizePkts);
 	while (flow_input.idx < flow_num && Seconds(flow_input.start_time) <= Simulator::Now()) {
 		uint32_t port = portNumder[flow_input.src][flow_input.dst]++; // get a new port number
 		RdmaClientHelper clientHelper(flow_input.pg, serverAddress[flow_input.src], serverAddress[flow_input.dst], port, flow_input.dport, flow_input.maxPacketCount, has_win ? (global_t == 1 ? maxBdp : pairBdp[n.Get(flow_input.src)][n.Get(flow_input.dst)]) : 0, global_t == 1 ? maxRtt : pairRtt[flow_input.src][flow_input.dst], Simulator::GetMaximumSimulationTime());
-		ApplicationContainer appCon = clientHelper.Install(n.Get(flow_input.src));
+		// ApplicationContainer appCon = clientHelper.Install(n.Get(flow_input.src));
+		Ptr<RdmaClient> app = clientHelper.Install_once(n.Get(flow_input.src));
+		appList.push_back(app);
 //		appCon.Start(Seconds(flow_input.start_time));
-		appCon.Start(Seconds(0)); // setting the correct time here conflicts with Sim time since there is already a schedule event that triggered this function at desired time.
+		// appCon.Start(Seconds(0)); // setting the correct time here conflicts with Sim time since there is already a schedule event that triggered this function at desired time.
+		double loadFactor = 1.0;
+		uint32_t avgSize = 1000000;
+		uint32_t avgTimeInterval = 0;
+		double bandwidth = DataRate ("10Gbps").GetBitRate () / 8. / 1e9;   // in Bpns		
+		if (avgSize != 0 && avgTimeInterval != 0)
+			{
+			loadFactor = (avgSize / avgTimeInterval) / bandwidth;
+			}
+		else if (loadFactor != 0 && avgSize != 0)
+			{
+			avgTimeInterval = avgSize / (bandwidth * loadFactor);
+			}
+		else if (loadFactor != 0 && avgTimeInterval != 0)
+			{
+			avgSize = avgTimeInterval * bandwidth * loadFactor;
+			}
+		else
+			{
+			NS_FATAL_ERROR ("Error in load calculating!");
+			}		
+		// msgSizeCDF = ReadMsgSizeDist (avgMsgSizePkts);
+		// uint32_t avgLPUTimeInterval = avgTimeInterval * LPUs.size ();
+		uint32_t avgLPUTimeInterval = avgTimeInterval * 11;
+		app->SetWorkload (avgSize, avgLPUTimeInterval, msgSizeCDF, avgMsgSizePkts);
+		app->SetStartTime (Seconds(0));
 		// get the next flow input
 		flow_input.idx++;
 		ReadFlowInput();

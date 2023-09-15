@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/examples/PowerTCP/ns3.35-powertcp-evaluation-burst-debug",
             "args": [
-                "--conf=/home/hxnan/ns3-datacenter/simulator/ns-3.35/examples/PowerTCP/config-burst.txt",
+                "--conf=./examples/PowerTCP/config-burst.txt",
                 "--algorithm=1", "--wien=false", "--delayWien=false", "--windowCheck=1"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -25,6 +25,25 @@
                 "ignoreFailures": true
               }
             ]
+        },
+        {
+          "name": "(gdb) Attach",
+          "type": "cppdbg",
+          "request": "attach",
+          "program": "${workspaceFolder}/build/examples/PowerTCP/ns3.35-powertcp-evaluation-burst-debug",
+          "MIMode": "gdb",
+          "setupCommands": [
+              {
+                  "description": "Enable pretty-printing for gdb",
+                  "text": "-enable-pretty-printing",
+                  "ignoreFailures": true
+              },
+              {
+                  "description": "Set Disassembly Flavor to Intel",
+                  "text": "-gdb-set disassembly-flavor intel",
+                  "ignoreFailures": true
+              }
+          ]
         }
     ]
 }

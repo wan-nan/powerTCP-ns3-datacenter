@@ -70,6 +70,8 @@ public:
      */
   ApplicationContainer Install (NodeContainer c);
 
+  Ptr<RdmaClient> Install_once (Ptr<Node> node);
+
 private:
   ObjectFactory m_factory;
 };

@@ -98,6 +98,13 @@ RdmaClient::GetTypeId (void)
 }
 
 RdmaClient::RdmaClient ()
+  : m_interMsgTime (0),
+    m_msgSizePkts (0),
+    m_totMsgCnt (0),
+    m_avgMsgSizePkts (0),
+    m_avgSize (0),
+    m_avgTimeInterval (0),
+    m_totalSizeBytes (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
@@ -138,13 +145,116 @@ void RdmaClient::DoDispose (void)
   Application::DoDispose ();
 }
 
+void RdmaClient::SetWorkload (uint32_t avgSize,
+                                   uint32_t avgTimeInterval,
+                                   std::map<double,int> msgSizeCDF,
+                                   double avgMsgSizePkts)
+{
+  NS_LOG_FUNCTION (this << avgMsgSizePkts);
+
+  // Note the device 0 is usually loopback device
+  // TODO: make it configurable
+  m_msgSizeCDF = msgSizeCDF;
+  m_avgSize = avgSize;
+  m_avgTimeInterval = avgTimeInterval;
+  m_avgMsgSizePkts = avgMsgSizePkts;
+
+  m_interMsgTime = CreateObject<ExponentialRandomVariable> ();
+  m_interMsgTime->SetAttribute ("Mean", DoubleValue (avgTimeInterval));
+
+  m_msgSizePkts = CreateObject<UniformRandomVariable> ();
+  m_msgSizePkts->SetAttribute ("Min", DoubleValue (0));
+  m_msgSizePkts->SetAttribute ("Max", DoubleValue (1));
+}
+void RdmaClient::Start (Time start)
+{
+  NS_LOG_FUNCTION (this);
+
+  SetStartTime (start);
+  DoInitialize ();
+}
+
 void RdmaClient::StartApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
+  // // get RDMA driver and add up queue pair
+  // Ptr<Node> node = GetNode();
+  // Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
+  ScheduleNextMessage ();
+  // rdma->AddQueuePair(m_size, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this),stopTime);
+}
+
+void RdmaClient::ScheduleNextMessage ()
+{
+  NS_LOG_FUNCTION (Simulator::Now ().GetNanoSeconds () << this);
+  bool m_poissonFlow = true;
+  if (Simulator::IsExpired (m_nextSendEvent))
+    {
+      if (m_poissonFlow)
+        {
+          m_nextSendEvent = Simulator::Schedule (NanoSeconds (m_interMsgTime->GetInteger ()),
+                                                 &RdmaClient::SendMessage, this);
+        }
+
+      else
+        {
+          m_nextSendEvent = Simulator::Schedule (NanoSeconds (m_avgTimeInterval),
+                                                 &RdmaClient::SendMessage, this);
+        }
+    }
+  else
+    {
+      NS_LOG_WARN ("RdmaClient (" << this <<
+                   ") tries to schedule the next msg before the previous one is sent!");
+    }
+}
+uint32_t RdmaClient::GetNextMsgSizeFromDist ()
+{
+  NS_LOG_FUNCTION (this);
+
+  int msgSizePkts = -1;
+  double rndValue = m_msgSizePkts->GetValue (0.0, 1.0);
+  for (auto it = m_msgSizeCDF.begin (); it != m_msgSizeCDF.end (); it++)
+    {
+      if (rndValue <= it->first)
+        {
+          msgSizePkts = it->second;
+          break;
+        }
+    }
+
+  NS_ASSERT (msgSizePkts >= 0);
+  // Homa header can't handle msgs larger than 0xffff pkts
+  // msgSizePkts = std::min(0xffff, msgSizePkts);
+
+  uint32_t msgSizeBytes = msgSizePkts / m_avgMsgSizePkts * m_avgSize;
+
+  return msgSizeBytes;
+
+  // NOTE: If maxPayloadSize is not set, the generated messages will be
+  //       slightly larger than the intended number of packets due to
+  //       the addition of the protocol headers.
+}
+void RdmaClient::SendMessage ()
+{
+  NS_LOG_FUNCTION (Simulator::Now ().GetNanoSeconds () << this);
+
+  /* Decide on the message size to send */
+  uint32_t msgSizeBytes = GetNextMsgSizeFromDist ();
+
+  /* Send the message */
+  m_totMsgCnt += 1;
+  m_totalSizeBytes += msgSizeBytes;
   // get RDMA driver and add up queue pair
   Ptr<Node> node = GetNode();
   Ptr<RdmaDriver> rdma = node->GetObject<RdmaDriver>();
-  rdma->AddQueuePair(m_size, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this),stopTime);
+  rdma->AddQueuePair(msgSizeBytes, m_pg, m_sip, m_dip, m_sport, m_dport, m_win, m_baseRtt, MakeCallback(&RdmaClient::Finish, this),stopTime);
+  uint16_t m_maxMsgs = 0;
+  bool m_microbenchExp = false;
+  if (!m_microbenchExp && (m_maxMsgs == 0 || m_totMsgCnt < m_maxMsgs))
+    {
+      ScheduleNextMessage ();
+    }
 }
 
 void RdmaClient::StopApplication ()

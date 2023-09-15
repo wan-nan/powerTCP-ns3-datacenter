@@ -1,4 +1,4 @@
-source config.sh
+source examples/PowerTCP/config.sh
 configFile=$NS3/examples/PowerTCP/config-burst.txt
 RES_DUMP=$NS3/examples/PowerTCP/dump_burst
 
@@ -65,27 +65,27 @@ for algorithm in ${algs[@]};do
 
 	sleep 5
 	# Check how many cores are being used.
-	while [[ $(ps aux|grep "powertcp-evaluation-burst-optimized"|wc -l) -gt 38 ]];do
-		echo "Waiting for cpu cores.... $N-th experiment "
-		sleep 60
-	done
+	# while [[ $(ps aux|grep "powertcp-evaluation-burst-optimized"|wc -l) -gt 38 ]];do
+	# 	echo "Waiting for cpu cores.... $N-th experiment "
+	# 	sleep 60
+	# done
 
 
 	echo "evaluation-${algNames[$algorithm]}.out $N"
 	N=$(( $N+1 ))
 	RESULT_FILE="$RES_DUMP/evaluation-${algNames[$algorithm]}.out"
 	# echo "time ./waf --run "evaluation-fairness --algorithm=${CCMODE[$algorithm]} --wien=$wien --delayWien=$delay --windowCheck=$window""
-	echo "./waf --run "powertcp-evaluation-burst --conf=$configFile --algorithm=${CCMODE[$algorithm]} --wien=$wien --delayWien=$delay --windowCheck=$window""
+	echo "./waf --run "powertcp-evaluation-burst --conf=$configFile --algorithm=${CCMODE[$algorithm]} --wien=$wien --delayWien=$delay --windowCheck=$window" > $RESULT_FILE  2> $RESULT_FILE &"
 	time ./waf --run "powertcp-evaluation-burst --conf=$configFile --algorithm=${CCMODE[$algorithm]} --wien=$wien --delayWien=$delay --windowCheck=$window" > $RESULT_FILE  2> $RESULT_FILE &
 done
 
 
 
 
-while [[ $(ps aux|grep "powertcp-evaluation-burst-optimized"|wc -l) -gt 1 ]];do
-	echo "Waiting for cpu cores.... $N-th experiment "
-	sleep 5
-done
+# while [[ $(ps aux|grep "powertcp-evaluation-burst-optimized"|wc -l) -gt 1 ]];do
+# 	echo "Waiting for cpu cores.... $N-th experiment "
+# 	sleep 5
+# done
 
 
 echo "##################################"

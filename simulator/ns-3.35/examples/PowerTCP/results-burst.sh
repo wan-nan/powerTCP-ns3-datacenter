@@ -1,4 +1,4 @@
-source config.sh
+source examples/PowerTCP/config.sh
 RES_DUMP=$NS3/examples/PowerTCP/dump_burst
 RES_RESULTS=$NS3/examples/PowerTCP/results_burst
 

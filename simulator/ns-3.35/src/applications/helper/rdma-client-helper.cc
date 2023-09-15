@@ -62,4 +62,12 @@ RdmaClientHelper::Install (NodeContainer c)
   return apps;
 }
 
+Ptr<RdmaClient>
+RdmaClientHelper::Install_once (Ptr<Node> node)
+{
+  Ptr<RdmaClient> client = m_factory.Create<RdmaClient> ();
+  node->AddApplication (client);
+  return client;
+}
+
 } // namespace ns3
